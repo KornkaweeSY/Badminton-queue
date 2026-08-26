@@ -1,10 +1,19 @@
--- รันไฟล์นี้ใน Supabase Dashboard -> SQL Editor -> New query -> Run
--- (โปรเจกต์: Badminton, https://afygltscbgkcvnsfhiqq.supabase.co)
+-- รันไฟล์นี้ใน Supabase SQL Editor แทนการรัน migration ทีละไฟล์
+-- ล้างตารางเก่าทั้งหมด (มีแค่ข้อมูลทดสอบ ไม่มีของจริง) แล้วสร้างใหม่ตาม schema ล่าสุดในไฟล์เดียว
+-- ใช้ตอนไล่ migration ทีละไฟล์แล้วสับสนว่ารันอะไรไปแล้วบ้าง — เริ่มจากศูนย์ให้ตรงกับโค้ดชัวร์ๆ
+
+drop table if exists match_players cascade;
+drop table if exists queue_entries cascade;
+drop table if exists matches cascade;
+drop table if exists registrations cascade;
+drop table if exists players cascade;
+drop table if exists sessions cascade;
+drop table if exists courts cascade;
 
 create extension if not exists "pgcrypto";
 
 -- ตัวตนถาวรของผู้เล่น (คงอยู่ข้ามวัน) เก็บ level ปัจจุบัน + สถิติสะสม — ไม่ซ้ำต่อการลงทะเบียนแต่ละครั้ง
-create table if not exists players (
+create table players (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   line_name text not null,
@@ -14,10 +23,10 @@ create table if not exists players (
   created_at timestamptz not null default now()
 );
 
-create unique index if not exists players_name_line_key on players (name, line_name);
+create unique index players_name_line_key on players (name, line_name);
 
 -- 1 แถว = การเปิดรับสมัครของ 1 วันเล่น (สโมสรเล่น 3-7 วัน/สัปดาห์ แต่ละวันแยกรอบกัน)
-create table if not exists sessions (
+create table sessions (
   id uuid primary key default gen_random_uuid(),
   play_date date not null unique,
   capacity integer not null default 14,
@@ -25,7 +34,7 @@ create table if not exists sessions (
 );
 
 -- คนลงชื่อเข้าเล่นในแต่ละรอบ ผูกกับ player ตัวจริง — ลำดับสมัคร (created_at) เกิน capacity ของ session = สำรอง
-create table if not exists registrations (
+create table registrations (
   id uuid primary key default gen_random_uuid(),
   session_id uuid not null references sessions(id) on delete cascade,
   player_id uuid not null references players(id) on delete cascade,
@@ -33,17 +42,17 @@ create table if not exists registrations (
   created_at timestamptz not null default now()
 );
 
-create unique index if not exists registrations_session_player_key on registrations (session_id, player_id);
-create index if not exists registrations_session_idx on registrations (session_id, created_at);
-create index if not exists registrations_player_idx on registrations (player_id);
+create unique index registrations_session_player_key on registrations (session_id, player_id);
+create index registrations_session_idx on registrations (session_id, created_at);
+create index registrations_player_idx on registrations (player_id);
 
-create table if not exists courts (
+create table courts (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   status text not null default 'idle' check (status in ('idle', 'playing'))
 );
 
-create table if not exists matches (
+create table matches (
   id uuid primary key default gen_random_uuid(),
   court_id uuid not null references courts(id) on delete cascade,
   status text not null default 'playing' check (status in ('playing', 'finished')),
@@ -51,23 +60,23 @@ create table if not exists matches (
   finished_at timestamptz
 );
 
-create table if not exists match_players (
+create table match_players (
   match_id uuid not null references matches(id) on delete cascade,
   registration_id uuid not null references registrations(id) on delete cascade,
   team text not null check (team in ('A', 'B')),
   primary key (match_id, registration_id)
 );
 
-create table if not exists queue_entries (
+create table queue_entries (
   id uuid primary key default gen_random_uuid(),
   registration_id uuid not null references registrations(id) on delete cascade,
   order_index integer not null,
   joined_at timestamptz not null default now()
 );
 
-create index if not exists queue_entries_order_idx on queue_entries (order_index);
-create index if not exists match_players_match_idx on match_players (match_id);
-create index if not exists match_players_registration_idx on match_players (registration_id);
+create index queue_entries_order_idx on queue_entries (order_index);
+create index match_players_match_idx on match_players (match_id);
+create index match_players_registration_idx on match_players (registration_id);
 
 -- Row Level Security: เปิดทุกตาราง
 alter table players enable row level security;
@@ -92,7 +101,6 @@ create policy "public read queue_entries" on queue_entries for select using (tru
 -- เปิด Realtime ให้ตารางที่บอร์ดต้องอัปเดตสด
 alter publication supabase_realtime add table courts, matches, queue_entries, registrations;
 
--- ข้อมูลตัวอย่าง: คอร์ต 3 สนาม (แก้จำนวน/ชื่อได้ตามจริง)
-insert into courts (name)
-select v.name from (values ('คอร์ต 1'), ('คอร์ต 2'), ('คอร์ต 3')) as v(name)
-where not exists (select 1 from courts);
+-- ข้อมูลตัวอย่าง: คอร์ต 3 สนาม + รอบเล่นวันที่ 26/8/2026 รับ 14 คน (แก้ทีหลังได้)
+insert into courts (name) values ('คอร์ต 1'), ('คอร์ต 2'), ('คอร์ต 3');
+insert into sessions (play_date, capacity) values ('2026-08-26', 14);

@@ -4,19 +4,25 @@ import type { Player } from "@/lib/types/database";
 export class PlayersRepository {
   constructor(private readonly db: SupabaseClient) {}
 
-  async listAll(): Promise<Player[]> {
+  // (name, line_name) เป็น natural key ที่ใช้บอกว่า "คนเดิมมาลงชื่ออีกรอบ" หรือ "คนใหม่"
+  async findByNameAndLine(
+    name: string,
+    lineName: string
+  ): Promise<Player | null> {
     const { data, error } = await this.db
       .from("players")
       .select("*")
-      .order("name");
+      .eq("name", name)
+      .eq("line_name", lineName)
+      .maybeSingle();
     if (error) throw error;
     return data;
   }
 
   async create(input: {
     name: string;
-    line_name?: string | null;
-    position?: string | null;
+    line_name: string;
+    level: number;
   }): Promise<Player> {
     const { data, error } = await this.db
       .from("players")
@@ -25,5 +31,11 @@ export class PlayersRepository {
       .single();
     if (error) throw error;
     return data;
+  }
+
+  // อัปเดต level ตามที่ผู้เล่นกรอกล่าสุด (self-reported อาจเปลี่ยนได้เมื่อฝีมือขยับ)
+  async updateLevel(id: string, level: number): Promise<void> {
+    const { error } = await this.db.from("players").update({ level }).eq("id", id);
+    if (error) throw error;
   }
 }
