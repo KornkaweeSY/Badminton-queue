@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoutButton } from "@/components/logout-button";
+import { getCurrentStaffRole } from "@/lib/auth";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const role = await getCurrentStaffRole();
+
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
@@ -20,6 +24,24 @@ export function SiteHeader() {
           >
             ลงชื่อเข้าคิว
           </Link>
+          {role ? (
+            <>
+              <Link
+                href="/queue"
+                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-surface-hover"
+              >
+                จัดการคิว
+              </Link>
+              <LogoutButton />
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-surface-hover"
+            >
+              เข้าสู่ระบบ
+            </Link>
+          )}
           <ThemeToggle />
         </div>
       </div>

@@ -9,13 +9,16 @@ export function RegistrationTable({
   title,
   rows,
   waitlist,
+  canCheckIn,
 }: {
   title: string;
   rows: RegistrationWithPlayer[];
   waitlist?: boolean;
+  canCheckIn?: boolean;
 }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [checkingInId, setCheckingInId] = useState<string | null>(null);
 
   async function handleWithdraw(id: string, name: string) {
     if (!confirm(`ให้ "${name}" ถอนตัวใช่ไหม?`)) return;
@@ -32,6 +35,24 @@ export function RegistrationTable({
       alert(error instanceof Error ? error.message : "เกิดข้อผิดพลาด");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleCheckIn(id: string) {
+    setCheckingInId(id);
+    try {
+      const res = await fetch(`/api/registrations/${id}/check-in`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "เช็คอินไม่สำเร็จ");
+      }
+      router.refresh();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setCheckingInId(null);
     }
   }
 
@@ -55,6 +76,7 @@ export function RegistrationTable({
                 <th className="px-4 py-3 font-medium">ระดับ</th>
                 <th className="px-4 py-3 font-medium">ชื่อไลน์</th>
                 <th className="px-4 py-3 font-medium">หมายเหตุ</th>
+                {canCheckIn && <th className="px-4 py-3 font-medium">เช็คอิน</th>}
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
@@ -75,6 +97,24 @@ export function RegistrationTable({
                   </td>
                   <td className="px-4 py-3 text-muted">{row.players.line_name}</td>
                   <td className="px-4 py-3 text-muted">{row.notes || "-"}</td>
+                  {canCheckIn && (
+                    <td className="px-4 py-3">
+                      {row.checked_in_at ? (
+                        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
+                          เช็คอินแล้ว
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleCheckIn(row.id)}
+                          disabled={checkingInId === row.id}
+                          className="rounded-lg border border-accent/40 px-3 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+                        >
+                          {checkingInId === row.id ? "..." : "เช็คอิน"}
+                        </button>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"

@@ -33,4 +33,12 @@ export class RegistrationsRepository {
     const { error } = await this.db.from("registrations").delete().eq("id", id);
     if (error) throw error;
   }
+
+  async checkIn(id: string): Promise<void> {
+    const { error } = await this.db
+      .from("registrations")
+      .update({ checked_in_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+  }
 }

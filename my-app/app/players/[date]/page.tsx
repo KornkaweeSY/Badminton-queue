@@ -4,6 +4,7 @@ import { RegistrationsRepository } from "@/lib/repositories/registrations.reposi
 import { RegistrationTable } from "@/components/registration-table";
 import { formatThaiDate } from "@/lib/format";
 import { errorMessage } from "@/lib/errors";
+import { getCurrentStaffRole } from "@/lib/auth";
 import type { RegistrationWithPlayer, Session } from "@/lib/types/database";
 
 async function loadRosterData(date: string): Promise<{
@@ -33,7 +34,11 @@ export default async function PlayersByDatePage({
   params,
 }: PageProps<"/players/[date]">) {
   const { date } = await params;
-  const { session, registrations, dbError } = await loadRosterData(date);
+  const [{ session, registrations, dbError }, role] = await Promise.all([
+    loadRosterData(date),
+    getCurrentStaffRole(),
+  ]);
+  const canCheckIn = role !== null;
 
   if (dbError) {
     return (
@@ -70,10 +75,19 @@ export default async function PlayersByDatePage({
         </p>
       </div>
 
-      <RegistrationTable title="รายชื่อยืนยัน" rows={confirmed} />
+      <RegistrationTable
+        title="รายชื่อยืนยัน"
+        rows={confirmed}
+        canCheckIn={canCheckIn}
+      />
 
       {waitlist.length > 0 && (
-        <RegistrationTable title="รายชื่อสำรอง" rows={waitlist} waitlist />
+        <RegistrationTable
+          title="รายชื่อสำรอง"
+          rows={waitlist}
+          waitlist
+          canCheckIn={canCheckIn}
+        />
       )}
     </main>
   );

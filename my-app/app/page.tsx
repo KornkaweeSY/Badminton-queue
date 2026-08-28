@@ -59,7 +59,7 @@ export default async function Home() {
         {courts.length === 0 ? (
           <EmptyState label="ยังไม่มีข้อมูลสนาม" />
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {courts.map((court) => {
               const playing = court.status === "playing";
               return (

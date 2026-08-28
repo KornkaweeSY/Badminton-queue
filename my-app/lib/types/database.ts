@@ -1,3 +1,11 @@
+export type StaffRole = "admin" | "staff";
+
+export type StaffMember = {
+  user_id: string;
+  role: StaffRole;
+  created_at: string;
+};
+
 export type Player = {
   id: string;
   name: string;
@@ -5,6 +13,7 @@ export type Player = {
   level: number | null;
   wins: number;
   losses: number;
+  draws: number;
   created_at: string;
 };
 
@@ -20,6 +29,7 @@ export type Registration = {
   session_id: string;
   player_id: string;
   notes: string | null;
+  checked_in_at: string | null;
   created_at: string;
 };
 
@@ -37,11 +47,16 @@ export type Court = {
 };
 
 export type MatchStatus = "playing" | "finished";
+export type MatchResult = "team_a" | "team_b" | "draw";
 
 export type Match = {
   id: string;
+  session_id: string;
   court_id: string;
   status: MatchStatus;
+  result: MatchResult | null;
+  score_a: number | null;
+  score_b: number | null;
   started_at: string;
   finished_at: string | null;
 };
@@ -52,11 +67,4 @@ export type MatchPlayer = {
   match_id: string;
   registration_id: string;
   team: Team;
-};
-
-export type QueueEntry = {
-  id: string;
-  registration_id: string;
-  order_index: number;
-  joined_at: string;
 };
